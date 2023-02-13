@@ -1,2 +1,2 @@
-# explain-tree-sitter
+# code2text
 Code-explanation tools based on tree-sitter
