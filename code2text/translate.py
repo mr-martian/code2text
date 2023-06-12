@@ -63,7 +63,12 @@ class Pattern:
                     return False
         return True
     def make_capture(self, dct):
-        if 'root' not in dct:
+        root_name = 'root'
+        for name in ['root', 'root_text']:
+            if name in dct:
+                root_name = name
+                break
+        else:
             raise ValueError('Pattern did not capture @root')
         if isinstance(self.output, str):
             return Capture(dct, self.output)
@@ -72,12 +77,16 @@ class Pattern:
                 continue
             return Capture(dct, option.get('output', ''),
                            list_forms=option.get('lists', {}))
-        return Capture.make_null(dct['root'])
+        return Capture.make_null(dct[root_name])
     def match(self, tree):
         cur = {}
+        seen_roots = set()
         for node, name in self.query.captures(tree):
-            if name == 'root' and cur:
-                yield self.make_capture(cur)
+            loc = (node.start_point, node.end_point)
+            if name in ['root', 'root_text'] and loc not in seen_roots:
+                if cur:
+                    yield self.make_capture(cur)
+                seen_roots.add(loc)
                 cur = {}
             if name.endswith('_list'):
                 if name not in cur:
@@ -99,7 +108,7 @@ class PatternApplier:
     def apply_patterns(self):
         for qr in self.queries:
             for cap in qr.match(self.tree):
-                root = cap.nodes.get('root')
+                root = cap.nodes.get('root', cap.nodes.get('root_text'))
                 if not root:
                     # TODO: should probably issue a warning or an error
                     continue

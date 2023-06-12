@@ -124,3 +124,25 @@ class ConditionalOutput(TranslateTest):
         },
     ]
     expected_output = 'If the cohort at position 1 matches the set Y and the cohort at position 2 matches the set Z, keep only readings matching the set X.'
+
+class NonAdjacentList(TranslateTest):
+    language = TSA.RTX
+    text = 'n: _.a.b;'
+    rules = [
+        {
+            'pattern': '(source_file (_) @x) @root',
+            'output': '{x}',
+        },
+        {
+            'pattern': '(output_rule pos: (ident) @pos_text (ident) @tag_list) @root',
+            'output': [{
+                'lists': {'tag_list': {'join': ', '}},
+                'output': 'When outputting {pos_text}, put {tag_list}',
+            }],
+        },
+        {
+            'pattern': '(ident) @root_text',
+            'output': '{root_text}',
+        },
+    ]
+    expected_output = 'When outputting n, put _, a, b'
