@@ -29,7 +29,7 @@ class Capture:
                 yield name, node
     def make_null(node):
         dct = {'root': node}
-        ls = [node.type]
+        ls = [node.type.replace('{', '{{').replace('}', '}}')]
         for i, ch in enumerate(node.children):
             n = 'ch%s' % i
             ls.append('{'+n+'}')
