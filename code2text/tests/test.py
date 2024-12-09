@@ -39,7 +39,7 @@ class ListRules(TranslateTest):
     text = 'SELECT X ; SELECT Y ;'
     rules = [
         {
-            'pattern': '(source_file (_) @thing_list) @root',
+            'pattern': '(source_file (_)* @thing_list) @root',
             'output': [
                 {
                     'lists': {
@@ -70,7 +70,7 @@ class ConditionalOutput(TranslateTest):
     text = 'SELECT X IF (1 Y) (2 Z) ;'
     rules = [
         {
-            'pattern': '(source_file (_) @thing_list) @root',
+            'pattern': '(source_file (_)* @thing_list) @root',
             'output': [
                 {
                     'lists': {
@@ -100,7 +100,7 @@ class ConditionalOutput(TranslateTest):
   (rule
     (ruletype) @type
     (rule_target (_) @target)
-    [(contexttest) @test_list "(" ")"]*
+    [(contexttest)* @test_list "(" ")"]*
   ) @root
   (#match? @type "^SELECT$")
 )
@@ -134,7 +134,7 @@ class NonAdjacentList(TranslateTest):
             'output': '{x}',
         },
         {
-            'pattern': '(output_rule pos: (ident) @pos_text (ident) @tag_list) @root',
+            'pattern': '(output_rule pos: (ident) @pos_text [(ident) @tag_list "."]*) @root',
             'output': [{
                 'lists': {'tag_list': {'join': ', '}},
                 'output': 'When outputting {pos_text}, put {tag_list}',

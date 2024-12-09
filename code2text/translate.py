@@ -1,17 +1,23 @@
 from tree_sitter import Parser
 
 class Capture:
-    def __init__(self, nodes, output, list_forms=None):
+    def __init__(self, nodes, output, list_forms=None, strip=True):
         self.nodes = nodes
         self.output = output
         self.list_forms = list_forms or {}
+        self.strip = strip
     def format(self, strings):
         dct = {}
         for name, node in self.nodes.items():
             if name == 'root':
                 continue
+            strip = (self.strip == True or
+                     (isinstance(self.strip, list) and
+                      name in self.strip))
             if isinstance(node, list):
                 strs = [strings[n.id] for n in node]
+                if strip:
+                    strs = [s.strip() for s in strs]
                 j = ' '
                 if name in self.list_forms:
                     j = self.list_forms[name].get('join', ' ')
@@ -19,6 +25,8 @@ class Capture:
                 # TODO: more complex lists
             else:
                 dct[name] = strings[node.id]
+                if strip:
+                    dct[name] = dct[name].strip()
         return self.output.format(**dct)
     def requirements(self):
         for name, node in self.nodes.items():
@@ -76,26 +84,18 @@ class Pattern:
             if not self.satisfies(option.get('cond', []), dct):
                 continue
             return Capture(dct, option.get('output', ''),
-                           list_forms=option.get('lists', {}))
+                           list_forms=option.get('lists', {}),
+                           strip=option.get('strip', True))
         return Capture.make_null(dct[root_name])
     def match(self, tree):
-        cur = {}
-        seen_roots = set()
-        for node, name in self.query.captures(tree):
-            loc = (node.start_point, node.end_point)
-            if name in ['root', 'root_text'] and loc not in seen_roots:
-                if cur:
-                    yield self.make_capture(cur)
-                seen_roots.add(loc)
-                cur = {}
-            if name.endswith('_list'):
-                if name not in cur:
-                    cur[name] = []
-                cur[name].append(node)
-            else:
-                cur[name] = node
-        if cur:
-            yield self.make_capture(cur)
+        for m in self.query.matches(tree):
+            dct = {}
+            for k, v in m[1].items():
+                if k.endswith('_list'):
+                    dct[k] = v
+                elif v:
+                    dct[k] = v[0]
+            yield self.make_capture(dct)
     def from_json(language, obj):
         return Pattern(language, obj['pattern'], obj['output'])
 
@@ -162,8 +162,7 @@ def load_patterns(json_list, language):
     return [Pattern.from_json(language, obj) for obj in json_list]
 
 def translate(patterns, language, input_text):
-    p = Parser()
-    p.set_language(language)
+    p = Parser(language)
     byt = to_bytes(input_text)
     tree = p.parse(byt).root_node
     app = PatternApplier(patterns, tree, byt)
