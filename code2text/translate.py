@@ -17,7 +17,7 @@ class Capture:
             if isinstance(node, list):
                 strs = [strings[n.id] for n in node]
                 if strip:
-                    strs = [s.strip() for s in strs]
+                    strs = [s.strip() for s in strs if s.strip()]
                 j = ' '
                 if name in self.list_forms:
                     j = self.list_forms[name].get('join', ' ')
