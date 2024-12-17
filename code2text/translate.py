@@ -127,14 +127,19 @@ class PatternApplier:
                 self.matches[cur.id] = Capture.make_null(cur)
             cap = self.matches[cur.id]
             incomplete = []
+            root_text = None
             for name, node in cap.requirements():
                 if name != 'root' and node.id not in done:
                     if name.endswith('_text'):
+                        if name == 'root_text':
+                            root_text = node
                         done[node.id] = self.get_str(node)
                     else:
                         incomplete.append(node)
             if incomplete:
                 todo += incomplete
+                if root_text:
+                    del done[root_text.id]
             else:
                 todo.pop()
                 done[cur.id] = cap.format(done)
