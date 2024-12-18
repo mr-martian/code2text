@@ -46,9 +46,13 @@ class Capture:
         return Capture(dct, pat)
 
 class Pattern:
-    def __init__(self, language, query_string, output):
+    def __init__(self, language, query_string, output, ancestor=None):
+        self.qs = query_string
         self.query = language.query(query_string)
         self.output = output
+        self.ancestor = ancestor
+        if ancestor is not None:
+            self.ancestor = language.query(self.ancestor)
     def satisfies(self, cond, dct):
         for c in cond:
             if 'has' in c and c['has'] not in dct:
@@ -87,8 +91,17 @@ class Pattern:
                            list_forms=option.get('lists', {}),
                            strip=option.get('strip', True))
         return Capture.make_null(dct[root_name])
+    def get_matches(self, tree):
+        if self.ancestor is None:
+            yield from self.query.matches(tree)
+        else:
+            for m in self.ancestor.matches(tree):
+                if 'root' not in m[1]:
+                    raise ValueError('Ancestor pattern did not capture @root')
+                for r in m[1]['root']:
+                    yield from self.query.matches(r)
     def match(self, tree):
-        for m in self.query.matches(tree):
+        for m in self.get_matches(tree):
             dct = {}
             for k, v in m[1].items():
                 if k.endswith('_list'):
@@ -97,7 +110,8 @@ class Pattern:
                     dct[k] = v[0]
             yield self.make_capture(dct)
     def from_json(language, obj):
-        return Pattern(language, obj['pattern'], obj['output'])
+        return Pattern(language, obj['pattern'], obj['output'],
+                       ancestor=obj.get('ancestor'))
 
 class PatternApplier:
     def __init__(self, queries, tree, bytestring):
